@@ -58,7 +58,7 @@ Add transition to containers so they can push in and out.
     border-bottom: 1px solid #eee;
   }
   .header h1 {
-    margin: 0.2em 0;
+    margin: 0.1 0 0.2em 0;
     font-size: 3em;
     font-weight: 300;
     color: #0af;
@@ -181,7 +181,6 @@ Add transition to containers so they can push in and out.
     padding: 2.1em 1.6em;
   }
 
-
   .menu-link span {
     position: relative;
     display: block;
@@ -278,31 +277,46 @@ Add transition to containers so they can push in and out.
     border-bottom: 1px solid #0af;
     color: #444;
   }
+  .expense-list .date, .expense-list .time {
+    margin-right: 18px;
+    display: inline-block;
+  }
 
   .expense-list .date {
-    font-weight: bold;
-    color: #444;
+    -webkit-font-smoothing: antialiased;
+    color: #888;
   }
   .expense-list h3 {
     text-align: right;
-    border-bottom: 1px solid #ccc;
+    display: inline-block;
+    padding: 0;
+    margin: 0;
+    float: right;
+  }
+  .expense-list .note {
+    border-top: 1px solid #ccc;
+    margin-top: 10px;
+    padding-top: 5px;
+    -webkit-font-smoothing: antialiased;
+    color: #444;
   }
 
-
   .expense-list .time {
-    color: #aaa;
+    color: #444;
     font-weight: light;
     -webkit-font-smoothing: antialiased;
   }
 
   .category-button {
+    display: inline-block;
+    position: absolute;
     background: #0af;
     color: white;
     padding: 4px 8px;
     line-height: 1em;
-    margin-top: 0.2em;
+    margin-top: 3px;
     font-size: 0.8em;
-    display: inline-block;
     text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
     border-radius: 3px;
+    margin-bottom: 4px;
   }

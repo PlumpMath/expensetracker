@@ -2,10 +2,9 @@
   (:require-macros  [cljs.core.async.macros :refer  [go]])
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-
-            [figwheel.client :as fw :include-macros true]
             [cljs.core.async :refer [put! chan <!]]
             [cognitect.transit :as t]
+            [figwheel.client :as fw :include-macros true]
             [goog.string :as gstring]
             [goog.string.format :as gformat]
             )
@@ -91,21 +90,20 @@
       (dom/li #js {:className "pure-g"}
         ; date box
         (dom/div #js {:className "pure-u-1"} 
-          (dom/div #js{:className "date pure-u-1-4"}
+          (dom/span #js{:className "time"}
+                  (gstring/format "%02d:%02d"
+                    (.getHours (item :date))
+            (.getMinutes (item :date))))
+          (dom/span #js{:className "date"}
                   (gstring/format "%02d-%02d-%d"
                     (.getDate (item :date))
                     (inc (.getMonth (item :date)))
                     (.getFullYear (item :date))
                     ))
-          (dom/div #js{:className "time pure-u-1-4"}
-                  (gstring/format "%02d:%02d"
-                    (.getHours (item :date))
-                    (.getMinutes (item :date))))
-          (dom/div #js{:className (str "pure-u-1-4 " (:category item))}
-                   (dom/span #js {:className "category-button"
-                                  :style #js {:backgroundColor (string-to-color (:category item))}
-                                  } (name (:category item)))))
-        (dom/h3 #js {:className "pure-u-1 note"} (str (item :amount) "円"))    
+          (dom/span #js {:className "category-button"
+                        :style #js {:backgroundColor (string-to-color (:category item))}
+                        } (name (:category item)))
+          (dom/h3 #js {:className "amount"} (str (item :amount) "円")))
         (dom/div #js {:className "pure-u-1 note"} (item :note))))))
 
 (defn expense-list-component [items owner]
