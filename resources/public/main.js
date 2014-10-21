@@ -32,6 +32,6 @@ goog.addDependency("../cognitect/transit.js", ['cognitect.transit'], ['com.cogni
 goog.addDependency("../om_tools/core.js", ['om_tools.core'], ['plumbing.core', 'cljs.core', 'om.core', 'plumbing.fnk.schema']);
 goog.addDependency("../cljs/reader.js", ['cljs.reader'], ['goog.string', 'cljs.core', 'goog.string.StringBuffer']);
 goog.addDependency("../figwheel/client.js", ['figwheel.client'], ['goog.net.jsloader', 'cljs.core', 'cljs.core.async', 'clojure.string', 'cljs.reader']);
-goog.addDependency("../expenses/core.js", ['expenses.core'], ['goog.net.Jsonp', 'goog.string', 'goog.Uri', 'cljs.core', 'om.dom', 'cljs.core.async', 'cognitect.transit', 'figwheel.client', 'goog.string.format', 'om.core']);
+goog.addDependency("../expenses/core.js", ['expenses.core'], ['goog.net.Jsonp', 'goog.net.XhrIo', 'goog.string', 'goog.Uri', 'cljs.core', 'om.dom', 'cljs.core.async', 'cognitect.transit', 'figwheel.client', 'goog.string.format', 'om.core']);
 goog.addDependency("../expenses/components/index.js", ['expenses.components.index'], ['om_tools.dom', 'om_tools.core', 'cljs.core', 'om.core']);
 goog.addDependency("../expenses/components/error.js", ['expenses.components.error'], ['om_tools.dom', 'om_tools.core', 'cljs.core', 'om.core']);

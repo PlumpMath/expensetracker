@@ -77,8 +77,6 @@ Add transition to containers so they can push in and out.
     color: #888;
   }
 
-
-
   /*
   The `#menu` `<div>` is the parent `<div>` that contains the `.pure-menu` that
   appears on the left side of the page.
@@ -239,6 +237,10 @@ Add transition to containers so they can push in and out.
     }
   }
 
+  h2 {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
 
   .buttons {
     line-height: 2em;
@@ -259,9 +261,10 @@ Add transition to containers so they can push in and out.
     border-left: 1px solid #0af;
   }
 
-
   .expense-list {
     border-top: 1px solid #0af;
+    padding: 0;
+    margin: 0;
   }
 
   .expense-list, .expense-list li {
@@ -319,4 +322,36 @@ Add transition to containers so they can push in and out.
     text-shadow: 1px 1px 1px rgba(0,0,0,0.6);
     border-radius: 3px;
     margin-bottom: 4px;
+  }
+
+  #app-layout .pure-form input {
+    border-radius: 0;
+  }
+
+  #app-layout .pure-form .pure-button-primary{
+    background: #0af;
+    border: 1px solid #0af;
+  }
+  #app-layout h3, #app-layout h4 {
+    margin: 0px;
+    padding: 0px;
+  }
+  #app-layout h3 {
+    padding-top: 10px;
+    padding-left: 5px;
+    padding-bottom: 5px;
+  }
+  #app-layout h4 {
+    padding-left: 10px;
+    padding-bottom: 5px;
+  }
+
+  #app-layout .category-box {
+    text-align: center;
+    height: 3em;
+    line-height: 3em;
+    border: 1px solid #0af;
+  }
+  #app-layout .pure-form input[type=text] {
+
   }

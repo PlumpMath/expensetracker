@@ -7,10 +7,10 @@
             [figwheel.client :as fw :include-macros true]
             [goog.string :as gstring]
             [goog.string.format :as gformat]
+            [goog.net.XhrIo :as xhr]
             )
   (:import [goog.net Jsonp]
            [goog Uri]
-           [googl.net.XhrIo]
            ))
 
 
@@ -29,6 +29,12 @@
 
 (.initializeTouchEvents js/React true)
 
+;; localstorage
+;; -----------------------------------------------------------------------------
+
+(def r (t/reader :json-verbose))
+(def w (t/writer :json-verbose))
+
 (def app-state 
   (atom {:component :loading
          :menu-open false}))
@@ -38,6 +44,28 @@
     :day   (js/Date. (.getFullYear date)       (.getMonth date)       (+ n (.getDate date)))
     :month (js/Date. (.getFullYear date)       (+ n (.getMonth date)) (.getDate date))
     :year  (js/Date. (+ n (.getFullYear date)) (.getMonth date)       (.getDate date))))
+
+;; menu
+;; -----------------------------------------------------------------------------
+
+(defn menu-component [app owner]
+  (om/component
+    (dom/div nil
+      ; hamburger
+      (dom/a #js {:href "#menu" :id "menulink" :className "menu-link"
+                  :onClick #(om/transact! app (fn [a] (update-in a [:menu-open] not)))} 
+             (dom/span nil))
+      ; menu
+      (dom/div #js {:id "menu"}
+        (dom/div #js {:className "pure-menu pure-menu-open"}
+
+          (dom/a #js {:className "pure-menu-heading" :href "#"} "Expenses")
+          (apply dom/ul nil 
+                  (map #(dom/li nil (dom/a #js {:href "#"} %))
+                      ["home" "add" "save" "restore"]))))))) 
+
+;; main
+;; -----------------------------------------------------------------------------
 
 (defn buttons-component [app owner]
   (reify
@@ -160,26 +188,159 @@
             (om/build expense-list-component current-items)
             )))))
 
+;; add
+;; -----------------------------------------------------------------------------
+
+(defn category-select [app owner]
+  (reify
+    om/IRenderState
+    (render-state [_ state]
+      (dom/div #js  {:className "pure-u-1"}
+        ; add new
+        (dom/h3 #js {:className "pure-u-1"} "NEW")
+        (dom/form #js {:className "pure-form pure-g"}
+          (dom/div #js {:className "pure-u-3-4 wrapper"}
+            (dom/input #js {:ref "category-input" :type "text" :className "pure-input-1"}))
+            (dom/div #js {:className "pure-u-1-4 wrapper"}
+              (dom/input #js {:type "submit" 
+                              :className "pure-input-1 pure-button pure-button-primary" 
+                              :value "OK"
+                              :onClick (fn [e]
+                                        (.preventDefault e)
+                                        (let [v (-> (om/get-node owner "category-input") .-value)]
+                                          (when (not (empty? v))
+                                            (put! (:ch state) 
+                                                  {:category v}))))
+                          })))
+        ; select previous
+        (dom/h3 #js {:className "pure-u-1"} "PREVIOUS")
+        (apply dom/div #js {:className "pure-u-1"}
+          (om/build-all
+            #(om/component 
+               (dom/div #js {:className "category-box pure-u-1-3"
+                              :onClick (fn [e] (put! (:ch state) {:category %}))}
+                 (.toUpperCase %)))
+            (:categories app)))
+        ))))
+
+(defn amount-enter [app owner]
+  (reify
+    om/IRenderState 
+    (render-state [_ state]
+      (dom/div nil 
+        (dom/h3 #js {:className "pure-u-1"} "CATEGORY")
+        (dom/h4 #js {:className "pure-u-1"} (.toUpperCase (:category state)))
+        (dom/h3 #js {:className "pure-u-1"} "AMOUNT")
+        (dom/form #js {:className "pure-form pure-g"}
+          (dom/div #js {:className "pure-u-3-4 wrapper"}
+            (dom/input #js {:ref "amount-input" :type "number" :className "pure-input-1"}))
+            (dom/div #js {:className "pure-u-1-4 wrapper"}
+              (dom/input #js {:type "submit" 
+                              :className "pure-input-1 pure-button pure-button-primary" 
+                              :value "OK"
+                              :onClick (fn [e]
+                                        (.preventDefault e)
+                                        (let [v (-> (om/get-node owner "amount-input") .-value)]
+                                          (when (not (empty? v))
+                                            (put! (:ch state) 
+                                                  {:amount v}))))
+                          })))))))
+
+(defn note-enter [app owner]
+  (reify
+    om/IRenderState 
+    (render-state [_ state]
+      (dom/div nil 
+        (dom/h3 #js {:className "pure-u-1"} "CATEGORY")
+        (dom/h4 #js {:className "pure-u-1"} (.toUpperCase (:category state)))
+        (dom/h3 #js {:className "pure-u-1"} "AMOUNT")
+        (dom/h4 #js {:className "pure-u-1"} (str (:amount state) "円") )
+        (dom/h3 #js {:className "pure-u-1"} "NOTE")
+        (dom/form #js {:className "pure-form pure-g"}
+          (dom/div #js {:className "pure-u-3-4 wrapper"}
+            (dom/input #js {:ref "note-input" :type "text" :className "pure-input-1"}))
+            (dom/div #js {:className "pure-u-1-4 wrapper"}
+              (dom/input #js {:type "submit"
+                              :className "pure-input-1 pure-button pure-button-primary" 
+                              :value "OK"
+                              :onClick (fn [e]
+                                        (.preventDefault e)
+                                        (let [v (-> (om/get-node owner "note-input") .-value)]
+                                          (when (not (empty? v))
+                                            (put! (:ch state) 
+                                                  {:note v}))))
+                          })))))))
+
+
+(defn add-component [app owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      (let [add-chan (chan)]
+      (go
+        (loop []
+          (let [v (<! add-chan)]
+            (cond
+              (:category v) 
+              (om/update-state! owner 
+                #(assoc % :category (:category v) 
+                          :current :amount))
+              (:amount v) 
+              (om/update-state! owner 
+                #(assoc % :amount (js/parseInt (:amount v) 10)
+                          :current :note))
+              (:note v) 
+              (post-data app (:category state) (:amount state) (:note v))
+              :else
+              (om/transact! app
+                #(assoc % :component :main)))
+            (recur))
+          ))
+      {:ch      add-chan 
+       :current :category}))
+    om/IRenderState
+    (render-state [_ state]
+      (om/build 
+        (case (:current state)
+          :amount amount-enter
+          :note note-enter
+          category-select)
+        app
+        {:init-state state}
+        ))))
+
+
+;; error
+;; -----------------------------------------------------------------------------
+
+(defn error-component [app owner]
+  (om/component (dom/div nil "error")))
+
+
+;; async / loading
+;; -----------------------------------------------------------------------------
 
 (defn async-get [app]
   (let [uri "https://script.google.com/macros/s/AKfycbwRMHhtxd1TBQMVpmeV-25RJaCw2LVVSHL9O8yiY31qyJKl9N8/exec"
         req (Jsonp. (Uri. uri))]
     (.send req nil
-           #(let [data  (:expenses (js->clj % :keywordize-keys true))
-                  parsed (map (fn [d] (assoc d :date (js/Date. (:Timestamp d)))) data)]
-              (om/transact! app
-                (fn [a] 
-                  (assoc a
-                          :component :main
-                          :expenses parsed
-                          )))))))
+      #(let [data  (:expenses (js->clj % :keywordize-keys true))
+            parsed (map (fn [d] (assoc d :date (js/Date. (:Timestamp d)))) data)]
+        (om/transact! app
+          (fn [a] 
+            (assoc a
+                    :component :main
+                    :expenses parsed
+                    :categories (distinct (map (fn [e] (:category e)) parsed))
+                    )))))))
 
 (defn loading [app owner]
-  (go (async-get app))
-  (om/component (dom/div nil "loading")))
-
-(defn error-component [app owner]
-  (om/component (dom/div nil "error")))
+  (reify
+    om/IWillMount
+    (will-mount [_]
+      (async-get app))
+    om/IRender
+      (render [_] (dom/h2 #js {:style #js {:textAlign "center"}} "Loading"))))
 
 (defn formdata-from-map [m]
   (let [fd (new js/FormData)]
@@ -187,34 +348,18 @@
       (.append fd (name k) v))
     fd))
 
-(defn post-data [ch category amount note]
+(defn post-data [app category amount note]
   (let [url "https://docs.google.com/forms/d/11p1qaDZYYXVnRq7nupXb-Qxg55Ha4JN6KQH2-6EZcRg/formResponse"
         data {"entry.79683136" category
               "entry.697543822" amount
               "entry.573062127" note }]
-    (.send goog.net.XhrIo url
-           (fn [res] #_(put! ch res))
-           "POST"
-           (formdata-from-map data))))
+  (xhr/send url
+    (fn [res] (om/transact! app (fn [a] (assoc a :component :loading))))
+    "POST"
+    (formdata-from-map data))))
 
-(defn form-component [app owner]
-  (om/component (dom/div nil "form")))
-
-(defn menu-component [app owner]
-  (om/component
-    (dom/div nil
-      ; hamburger
-      (dom/a #js {:href "#menu" :id "menulink" :className "menu-link"
-                  :onClick #(om/transact! app (fn [a] (update-in a [:menu-open] not)))} 
-             (dom/span nil))
-      ; menu
-      (dom/div #js {:id "menu"}
-        (dom/div #js {:className "pure-menu pure-menu-open"}
-
-          (dom/a #js {:className "pure-menu-heading" :href "#"} "Expenses")
-          (apply dom/ul nil 
-                  (map #(dom/li nil (dom/a #js {:href "#"} %))
-                      ["home" "add" "save" "restore"]))))))) 
+;; dispatch
+;; -----------------------------------------------------------------------------
 
 (defn dispatch-component [app owner]
   (om/component
@@ -222,11 +367,11 @@
                   :className (if (app :menu-open) "active" "closed")}
       (om/build menu-component app)
       (dom/div #js {:className "header"}
-               (dom/h1 nil "Expenses."))
+               (dom/h1 nil "円"))
       (om/build
         (case (app :component)
-          :main main-component
-          :add  form-component
+          :main  main-component
+          :add   add-component
           :error error-component
           loading)
         app
