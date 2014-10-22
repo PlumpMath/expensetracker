@@ -484,11 +484,10 @@
 
 
 (defn days-list-component [app owner]
-  (let [days (map (fn [[k v]] {:date k
-                               :total (apply + (map #(.get % "amount") v))})
-                  (group-by #(doto (.get % "date")
-                               (.setHours 0 0 0 0)) 
-                            (:expenses app)))]
+  (let [days (sort-by #(-> % :date .getTime -)
+                (map (fn [[k v]] {:date k :total (apply + (map #(.get % "amount") v))})
+                  (group-by #(doto (.get % "date") (.setHours 0 0 0 0)) 
+                            (:expenses app))))]
     (om/component
       (apply dom/ul nil 
         (om/build-all day-item-component days)))))
