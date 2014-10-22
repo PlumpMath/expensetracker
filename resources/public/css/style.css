@@ -338,6 +338,7 @@ Add transition to containers so they can push in and out.
 
   .pure-button-danger {
     background: rgb(202, 60, 60);
+    border: 1px solid rgb(202, 60, 60);
     color: white;
     margin-bottom: 30px;
   }
@@ -374,7 +375,7 @@ Add transition to containers so they can push in and out.
     color: white;
   }
   .listbutton.del  {
-    background-color: #f83;
+    background-color: #f44;
   }
   .listbutton.edit  {
     background-color: #0af;
