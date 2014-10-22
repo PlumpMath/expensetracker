@@ -7,11 +7,8 @@
             [figwheel.client :as fw :include-macros true]
             [goog.string :as gstring]
             [goog.string.format :as gformat]
-            [goog.net.XhrIo :as xhr]
             )
-  (:import [goog.net Jsonp]
-           [goog Uri]
-           ))
+  )
 
 
 ;; -----------------------------------------------------------------------------
@@ -29,8 +26,18 @@
 
 (.initializeTouchEvents js/React true)
 
+;; dropbox datastorage
+;; -----------------------------------------------------------------------------
 
+(defn get-expenses
+  ([table] (.query table))
+  ([table options] (.query table (clj->js options))))
 
+(defn put-expense [table options] 
+  (.insert table (clj->js options)))
+
+(def db-cred (clj->js {:key "l66k7gnikqojlup"}))
+(def db-client (js/Dropbox.Client. db-cred))
 
 ;; util
 ;; -----------------------------------------------------------------------------
@@ -130,37 +137,92 @@
 
 (defn expense-list-item [item owner]
   (reify
-    om/IRender
-    (render [_]
-      (dom/li #js {:className "pure-g"}
+    om/IInitState
+    (init-state [_]
+      {:swiped false})
+    om/IRenderState
+    (render-state [_ state]
+      (dom/li #js {:className "pure-u-1"
+                   :onTouchStart (fn [e] (om/set-state! owner :touch-start (-> e (.-changedTouches) (aget 0))))
+                   :onTouchEnd   (fn [e] (let [touch-end (-> e (.-changedTouches) (aget 0))]
+                                           (if
+                                             (and
+                                               (:touch-start state)
+                                               )
+                                             (cond
+                                               (and 
+                                                 (not (:swiped state))
+                                                 (> 20 (Math/abs (- (.-pageY (:touch-start state))
+                                                                    (.-pageY touch-end)))) 
+                                                 (< 30 (- (.-pageX (:touch-start state))
+                                                          (.-pageX touch-end))))
+                                               (om/update-state! owner #(assoc % :swiped true
+                                                                                 :touch-start nil))
+
+                                               (and 
+                                                 (:swiped state)
+                                                 (> 20 (Math/abs (- (.-pageY (:touch-start state))
+                                                                    (.-pageY touch-end)))) 
+                                                 (< 30 (- (.-pageX touch-end)
+                                                          (.-pageX (:touch-start state))
+                                                          )))
+                                               (om/update-state! owner #(assoc % :swiped false
+                                                                                 :touch-start nil)))
+
+                                             (om/update-state! owner #(assoc % :swiped false
+                                                                               :touch-start nil)) 
+                                             )))}
         ; date box
-        (dom/div #js {:className "pure-u-1"} 
-          (dom/span #js{:className "time"}
-                  (gstring/format "%02d:%02d"
-                    (.getHours (.get item "date"))
-            (.getMinutes (.get item "date"))))
-          (dom/span #js{:className "date"}
-                  (gstring/format "%02d-%02d-%d"
-                    (.getDate (.get item "date"))
-                    (inc (.getMonth (.get item "date")))
-                    (.getFullYear (.get item "date"))
-                    ))
-          (dom/span #js {:className "category-button"
-                        :style #js {:backgroundColor (string-to-color (.get item "category"))}
-                        } (.get  item "category"))
-          (dom/h3 #js {:className "amount"} (str (.get item "amount") "円")))
-        (dom/div #js {:className "pure-u-1 note"} (.get item "note"))))))
+        (if (:swiped state)
+          (dom/div #js {:className "pure-u-1 inner"}
+                   (dom/div #js {:className "pure-u-1-2 listbutton edit"
+                                 :onClick (fn [e] 
+                                            (.preventDefault e)
+                                            (om/update-state! owner #(assoc % :swiped false
+                                                                              :touch-start nil)) 
+                                            (put! (om/get-shared owner :event-chan)
+                                                        {:message :edit :value item}))
+                                 }
+                            "EDIT")
+                   (dom/div #js {:className "pure-u-1-2 listbutton del"
+                                 :onClick (fn [e] 
+                                            (.preventDefault e)
+                                            (om/update-state! owner #(assoc % :swiped false
+                                                                              :touch-start nil)) 
+                                            (put! (om/get-shared owner :event-chan)
+                                                  {:message :delete :value item}))}
+
+                            "DELETE"))
+          (dom/div #js {:className "pure-u-1 inner"}
+                   (dom/div #js {:className "pure-u-1"}
+                            (dom/span #js{:className "time"}
+                                      (gstring/format "%02d:%02d"
+                                                      (.getHours (.get item "date"))
+                                                      (.getMinutes (.get item "date"))))
+                            (dom/span #js{:className "date"}
+                                      (gstring/format "%02d-%02d-%d"
+                                                      (.getDate (.get item "date"))
+                                                      (inc (.getMonth (.get item "date")))
+                                                      (.getFullYear (.get item "date"))
+                                                      ))
+                            (dom/span #js {:className "category-button"
+                                           :style #js {:backgroundColor (string-to-color (.get item "category"))}
+                                           } (.get  item "category"))
+                            (dom/h3 #js {:className "amount"} (str (.get item "amount") "円")))
+                   (dom/div #js {:className "pure-u-1 note"} (.get item "note"))))))))
 
 (defn expense-list-component [items owner]
   (reify
+    om/IInitState
+    (init-state [_]
+      {:swiped false})
     om/IRender
     (render [_]
       (dom/div #js {:className "pure-u-1"}
-        (apply dom/ul #js {:className "pure-u-1 expense-list"}
+        (apply dom/ul #js {:className "pure-u-1 expense-list" }
                       (om/build-all expense-list-item items))))))
 
 (defn filter-items [{:keys [span category]} f-date items]
-  (print items)
   (filter
     #(and
        (case span
@@ -188,8 +250,8 @@
                 (om/update-state! owner #(merge % new-focus)))
               (recur)))
           {:current-focus     {:span :day :category nil}
-            :current-focus-date now
-            :focus-chan         focus-chan}))
+           :current-focus-date now
+           :focus-chan         focus-chan}))
     om/IRenderState
       (render-state [_ {:keys [focus-chan current-focus current-focus-date]}]
         (let [current-items (sort-by (fn [item] (-> 
@@ -233,7 +295,7 @@
                                                   (put! (:ch state) 
                                                         {:category v}))))})))
         ; select previous
-        (let [categories (map #(.get % "category") (:expenses app))]
+        (let [categories (distinct (map #(.get % "category") (:expenses app)))]
           (when (not-empty categories)
             (dom/h3 #js {:className "pure-u-1"} "PREVIOUS")
             (apply dom/div #js {:className "pure-u-1"}
@@ -244,7 +306,6 @@
                                  (.toUpperCase %)))
                      categories
                      ))))
-
         (dom/div #js {:className "pure-form wrapper cancel"}
                  (dom/input #js {:type "submit" 
                                  :className "pure-input-1 pure-button pure-button-danger" 
@@ -253,7 +314,6 @@
                                             (.preventDefault e)
                                             (om/transact! app #(assoc % :component :main))
                                             )})) 
-        
         ))))
 
 (defn amount-enter [app owner]
@@ -266,7 +326,7 @@
         (dom/h3 #js {:className "pure-u-1"} "AMOUNT")
         (dom/form #js {:className "pure-form pure-g"}
           (dom/div #js {:className "pure-u-3-4 wrapper"}
-            (dom/input #js {:ref "amount-input" :type "number" :className "pure-input-1"}))
+            (dom/input #js {:ref "amount-input" :type "number" :autoFocus true :className "pure-input-1"}))
             (dom/div #js {:className "pure-u-1-4 wrapper"}
               (dom/input #js {:type "submit" 
                               :className "pure-input-1 pure-button pure-button-primary" 
@@ -300,7 +360,7 @@
         (dom/h3 #js {:className "pure-u-1"} "NOTE")
         (dom/form #js {:className "pure-form pure-g"}
           (dom/div #js {:className "pure-u-3-4 wrapper"}
-            (dom/input #js {:ref "note-input" :type "text" :className "pure-input-1"}))
+            (dom/input #js {:ref "note-input" :type "text" :autoFocus true :className "pure-input-1"}))
             (dom/div #js {:className "pure-u-1-4 wrapper"}
               (dom/input #js {:type "submit"
                               :className "pure-input-1 pure-button pure-button-primary" 
@@ -311,7 +371,6 @@
                                           (when (not (empty? v))
                                             (put! (:ch state) 
                                                   {:note v}))))})))
-
         (dom/div #js {:className "pure-form wrapper cancel"}
                  (dom/input #js {:type "submit" 
                                  :className "pure-input-1 pure-button pure-button-danger" 
@@ -332,24 +391,23 @@
         (loop []
           (let [v (<! add-chan)]
             (cond
-              (:category v) 
-              (om/update-state! owner 
-                #(assoc % :category (:category v) 
-                          :current :amount))
-              (:amount v) 
-              (om/update-state! owner 
-                #(assoc % :amount (js/parseInt (:amount v) 10)
-                          :current :note))
-              (:note v) 
-              (let [new-expense {:date (js/Date.)
-                                 :category (om/get-state owner :category) 
-                                 :amount (om/get-state owner :amount) 
-                                 :note (:note v)}]
-                (put-expense (:table (om/get-shared owner))
-                             new-expense)
-                (om/transact! app
-                  #(assoc % :component :main
-                            :expenses (get-expenses (:table (om/get-shared owner))))))
+              (:category v) (om/update-state! owner 
+                              #(assoc % :category (:category v) 
+                                        :current :amount))
+
+              (:amount v)   (om/update-state! owner 
+                              #(assoc % :amount (js/parseInt (:amount v) 10)
+                                        :current :note))
+
+              (:note v) (let [new-expense {:date (js/Date.)
+                                           :category (om/get-state owner :category) 
+                                           :amount (om/get-state owner :amount) 
+                                           :note (:note v)}]
+                          (put-expense (:table (om/get-shared owner))
+                                       new-expense)
+                          (om/transact! app
+                                        #(assoc % :component :main
+                                                :expenses (get-expenses (:table (om/get-shared owner))))))
               :else
               (om/transact! app
                 #(assoc % :component :main)))
@@ -368,6 +426,56 @@
         {:init-state state}
         ))))
 
+(defn edit-component [app owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      ( let [item (:current-item app)] 
+       {
+        :category (.get item "category")
+        :amount (.get item "amount")
+        :note (.get item "note")
+        }))
+
+    om/IRenderState
+    (render-state [_ state]
+      (let [item (:current-item app)]
+        (dom/form #js {:className "pure-form"}
+          (dom/h3 #js {:className "pure-u-1"} "CATEGORY")
+          (dom/input #js {:ref "category-input" :type "text" :className "pure-input-1" 
+                          :onChange #(om/set-state! owner [:category] (.. % -target -value))
+                          :value (:category state)})
+
+          (dom/h3 #js {:className "pure-u-1"} "AMOUNT")
+          (dom/input #js {:ref "amount-input" :type "number" :className "pure-input-1" 
+                          :onChange #(om/set-state! owner [:amount] (.. % -target -value))
+                          :value (:amount state)})
+
+          (dom/h3 #js {:className "pure-u-1"} "NOTE")
+          (dom/input #js {:ref "note-input" :type "text" :className "pure-input-1" 
+                          :onChange #(om/set-state! owner [:note] (.. % -target -value))
+                          :value (:note state)})
+
+          (dom/div #js {:className "pure-u-1-2 wrapper cancel"}
+            (dom/input #js {:type "submit" 
+                            :className "pure-input-1 pure-button pure-button-primary"
+                            :value "OK"
+                            :onClick (fn [e]
+                                      (.preventDefault e)
+                                      (.update item (clj->js state))
+                                      (om/transact! app #(assoc % :component :main 
+                                                                  :current-item nil))
+                                      )})) 
+          (dom/div #js {:className "pure-u-1-2 wrapper cancel"}
+            (dom/input #js {:type "submit" 
+                            :className "pure-input-1 pure-button pure-button-danger"
+                            :value "CANCEL"
+                            :onClick (fn [e]
+                                      (.preventDefault e)
+                                      (om/transact! app #(assoc % :component :main 
+                                                                  :current-item nil))
+                                      )})) 
+        )))))
 
 ;; error
 ;; -----------------------------------------------------------------------------
@@ -399,33 +507,44 @@
 ;; -----------------------------------------------------------------------------
 
 (defn dispatch-component [app owner]
-  (om/component
-    (dom/div #js {:id "app-layout" 
-                  :className (if (app :menu-open) "active" "closed")}
-      (om/build menu-component app)
-      (dom/div #js {:className "header"}
-               (dom/h1 #js {:onClick (fn [e] (om/transact! app #(assoc % :component :main)))} "expenses"))
-      (om/build
-        (case (app :component)
-          :main  main-component
-          :add   add-component
-          :error error-component
-          loading)
-        app
-        ))))
+  (reify
+    om/IWillMount
+    (will-mount [_]
+      (go
+        (loop []
+          (let [ev (<! (:event-chan (om/get-shared owner)))]
+            (cond
+              (= :edit (:message ev))
+              (om/transact! app #(assoc % :component :edit
+                                          :current-item (:value ev)))
+              (= :delete (:message ev))
+              (do
+                (.deleteRecord (:value ev))
+                (om/transact! app
+                              #(assoc % :component :main
+                                        :expenses (get-expenses (:table (om/get-shared owner)))))))
+
+            (recur)
+            ))))
+    om/IRender
+    (render [_]
+      (dom/div #js {:id "app-layout" 
+                    :className (if (app :menu-open) "active" "closed")}
+               (om/build menu-component app)
+               (dom/div #js {:className "header"}
+                        (dom/h1 #js {:onClick (fn [e] (om/transact! app #(assoc % :component :main)))} "expenses"))
+               (om/build
+                 (case (app :component)
+                   :main  main-component
+                   :add   add-component
+                   :edit  edit-component
+                   :error error-component
+                   loading)
+                 app
+                 )))))
 
 ;; Initialize
 ;; -----------------------------------------------------------------------------
-
-;; dropbox datastorage
-;; -----------------------------------------------------------------------------
-
-(defn get-expenses
-  ([table] (.query table))
-  ([table options] (.query table (clj->js options))))
-
-(defn put-expense [table options] 
-  (.insert table (clj->js options)))
 
 
 (defn main [auth-err]
@@ -444,14 +563,10 @@
                        {:menu-open false
                         :component :loading}
                        {:target target
-                        :shared {:table (.getTable ds "expenses")}})
+                        :shared {:table (.getTable ds "expenses")
+                                 :event-chan (chan)
+                                 }})
               )))))))
 
 
-(def db-cred (clj->js {:key "l66k7gnikqojlup"}))
-(def db-client (js/Dropbox.Client. db-cred))
 (.authenticate db-client nil main)
-
-(fw/watch-and-reload
-  :websocket-url   "ws://localhost:3449/figwheel-ws"
-  :jsload-callback (fn [] (print "reloaded")))

@@ -280,6 +280,9 @@ Add transition to containers so they can push in and out.
     border-bottom: 1px solid #0af;
     color: #444;
   }
+  .expense-list li .inner{
+    min-height: 95px;
+  }
   .expense-list .date, .expense-list .time {
     margin-right: 18px;
     display: inline-block;
@@ -362,4 +365,17 @@ Add transition to containers so they can push in and out.
     height: 3em;
     line-height: 3em;
     border: 1px solid #0af;
+  }
+
+  .listbutton {
+    text-align: center;
+    height: 90px;
+    line-height: 90px;
+    color: white;
+  }
+  .listbutton.del  {
+    background-color: #f83;
+  }
+  .listbutton.edit  {
+    background-color: #0af;
   }
