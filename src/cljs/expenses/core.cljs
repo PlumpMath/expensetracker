@@ -78,7 +78,6 @@
                         (.preventDefault e)
                         (om/transact! app #(assoc % :component :add :menu-open false)))}
                 "ADD"))
-            
             (dom/li nil
               (dom/a
                 #js {:onClick 
@@ -86,9 +85,7 @@
                         (.preventDefault e)
                         (om/transact! app #(assoc % :component :list :menu-open false)))}
                 "LIST")))
-
-
-                 ))))) 
+                 )))))
 
 ;; main
 ;; -----------------------------------------------------------------------------
@@ -120,17 +117,15 @@
       (dom/div #js {:className "pure-u-1"
                     :onClick   #(om/transact! app (fn [a] (assoc a :component :add
                                                                    :current-date current-focus-date)))
-                    } "Add"))
-      )))
+                    } "Add")))))
 
 (defn total-component [items owner]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:className "pure-u-1"}
-               (dom/h2 nil 
-                       (str "Total: " (->> items (map #(.get % "amount")) (apply +)) "円" )
-             )))))
+        (dom/h2 nil 
+                (str "Total: " (->> items (map #(.get % "amount")) (apply +)) "円" ))))))
 
 (defn string-to-color [s]
   (let [seed (* 6 (apply * (map #(.charCodeAt % 0) s)))
@@ -141,23 +136,21 @@
 
 (defn touch-end-check [e owner state]
   (let [touch-end (-> e (.-changedTouches) (aget 0))]
-    (if (and (:touch-start state))
-      (cond
-        ; isn't yet swiped
-        (and
-          (not (:swiped state))
-          (> 20 (Math/abs (- (.-pageY (:touch-start state)) (.-pageY touch-end))))
-          (< 30 (- (.-pageX (:touch-start state)) (.-pageX touch-end))))
-        (om/update-state! owner #(assoc % :swiped true :touch-start nil))
-
-        ; is swiped
-        (and 
-          (:swiped state)
-          (> 20 (Math/abs (- (.-pageY (:touch-start state)) (.-pageY touch-end))))
-          (< 30 (- (.-pageX touch-end) (.-pageX (:touch-start state)))))
-        (om/update-state! owner #(assoc % :swiped false :touch-start nil)))
+    (cond
+      (not (:touch-start state))
+      (om/update-state! owner #(assoc % :swiped false :touch-start nil))   
+      ; isn't yet swiped
+      (and
+        (not (:swiped state))
+        (> 20 (Math/abs (- (.-pageY (:touch-start state)) (.-pageY touch-end))))
+        (< 30 (- (.-pageX (:touch-start state)) (.-pageX touch-end))))
+      (om/update-state! owner #(assoc % :swiped true :touch-start nil))
+      ; is swiped
+      (and 
+        (:swiped state)
+        (> 20 (Math/abs (- (.-pageY (:touch-start state)) (.-pageY touch-end))))
+        (< 30 (- (.-pageX touch-end) (.-pageX (:touch-start state)))))
       (om/update-state! owner #(assoc % :swiped false :touch-start nil)))))
-
 
 (defn expense-list-item [item owner]
   (reify
@@ -172,16 +165,16 @@
       ; date box
       (if (:swiped state)
         (dom/div #js {:className "pure-u-1 inner"}
-                  (dom/div #js {:className "pure-u-1-2 listbutton edit"
-                                :onClick (fn [e] 
+                 (dom/div #js {:className "pure-u-1-2 listbutton edit"
+                               :onClick (fn [e] 
                                           (.preventDefault e)
                                           (om/update-state! owner #(assoc % :swiped false
-                                                                            :touch-start nil)) 
+                                                                          :touch-start nil)) 
                                           (put! (om/get-shared owner :event-chan)
                                                 {:message :edit :value item}))}
                           "EDIT")
-                  (dom/div #js {:className "pure-u-1-2 listbutton del"
-                                :onClick (fn [e] 
+                 (dom/div #js {:className "pure-u-1-2 listbutton del"
+                               :onClick (fn [e] 
                                           (.preventDefault e)
                                           (om/update-state! owner #(assoc % :swiped false
                                                                           :touch-start nil)) 
@@ -306,8 +299,7 @@
                                  :onClick (fn [e]
                                             (.preventDefault e)
                                             (om/transact! app #(assoc % :component :main))
-                                            )})) 
-        ))))
+                                            )}))))))
 
 (defn amount-enter [app owner]
   (reify
@@ -338,8 +330,7 @@
                                  :onClick (fn [e]
                                             (.preventDefault e)
                                             (om/transact! app #(assoc % :component :main))
-                                            )})) 
-        ))))
+                                            )}))))))
 
 (defn note-enter [app owner]
   (reify
@@ -371,9 +362,7 @@
                                  :onClick (fn [e]
                                             (.preventDefault e)
                                             (om/transact! app #(assoc % :component :main))
-                                            )})) 
-        ))))
-
+                                            )}))))))
 
 (defn add-component [app owner]
   (reify
@@ -414,20 +403,16 @@
           :note note-enter
           category-select)
         app
-        {:init-state state}
-        ))))
+        {:init-state state}))))
 
 (defn edit-component [app owner]
   (reify
     om/IInitState
     (init-state [_]
       (let [item (:current-item app)] 
-       {
-        :category (.get item "category")
-        :amount (.get item "amount")
-        :note (.get item "note")
-        }))
-
+        {:category (.get item "category")
+         :amount (.get item "amount")
+         :note (.get item "note")}))
     om/IRenderState
     (render-state [_ state]
       (let [item (:current-item app)]
@@ -465,8 +450,7 @@
                                       (.preventDefault e)
                                       (om/transact! app #(assoc % :component :main 
                                                                   :current-item nil))
-                                      )})) 
-        )))))
+                                      )})))))))
 
 ;; list
 ;; -----------------------------------------------------------------------------
@@ -566,8 +550,7 @@
             :list  days-list-component
             :error error-component
             loading)
-          app
-          )))))
+          app)))))
 
 ;; Initialize
 ;; -----------------------------------------------------------------------------
@@ -591,8 +574,6 @@
                        {:target target
                         :shared {:table (.getTable ds "expenses")
                                  :event-chan (chan)
-                                 }})
-              )))))))
-
+                                 }}))))))))
 
 (.authenticate db-client nil main)
