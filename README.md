@@ -1,12 +1,7 @@
 # expenses 
 
-A Clojure library designed to ... well, that part is up to you.
-
-## Usage
-
-FIXME
-
-## License
+Bit of a mess still.. mucking around with swipe events / dropbox datastore
+/ purecss and cljs/om.
 
 Copyright © 2014 FIXME
 
