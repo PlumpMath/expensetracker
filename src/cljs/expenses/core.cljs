@@ -486,7 +486,9 @@
 (defn days-list-component [app owner]
   (let [days (map (fn [[k v]] {:date k
                                :total (apply + (map #(.get % "amount") v))})
-                  (group-by #(.get % "date") (:expenses app)))]
+                  (group-by #(doto (.get % "date")
+                               (.setHours 0 0 0 0)) 
+                            (:expenses app)))]
     (om/component
       (apply dom/ul nil 
         (om/build-all day-item-component days)))))
