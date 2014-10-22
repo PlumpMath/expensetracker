@@ -7,8 +7,7 @@
             [figwheel.client :as fw :include-macros true]
             [goog.string :as gstring]
             [goog.string.format :as gformat]
-            )
-  )
+            ))
 
 
 ;; -----------------------------------------------------------------------------
@@ -64,25 +63,27 @@
           (dom/a #js {:className "pure-menu-heading" :href "#"} "Expenses")
           (dom/ul nil
             (dom/li nil
-              (dom/a
+              (dom/a 
                 #js {:onClick 
-                      (fn [e]
-                        (.preventDefault e)
-                        (om/transact! app 
-                                      #(assoc % :component :loading
-                                                :menu-open false
-                                              )))}
-                "top"))
+                     (fn [e]
+                       (.preventDefault e)
+                       (om/transact! app #(assoc % :component :loading :menu-open false)))}
+                "TOP"))
             (dom/li nil
               (dom/a
                 #js {:onClick 
                       (fn [e]
                         (.preventDefault e)
-                        (om/transact! app 
-                                      #(assoc % :component :add
-                                                :menu-open false
-                                              )))}
-                "add")))
+                        (om/transact! app #(assoc % :component :add :menu-open false)))}
+                "ADD"))
+            
+            (dom/li nil
+              (dom/a
+                #js {:onClick 
+                      (fn [e]
+                        (.preventDefault e)
+                        (om/transact! app #(assoc % :component :list :menu-open false)))}
+                "LIST")))
 
 
                  ))))) 
@@ -110,12 +111,13 @@
                         (.getFullYear current-focus-date)))
         (dom/div 
           #js {:className "pure-u-1-6 forward"
-               :onClick #(put! focus-chan 
+               :onClick #(put! focus-chan
                                {:current-focus-date 
                                 (adj-date current-focus-date (:span current-focus) 1)})}
           ">")
       (dom/div #js {:className "pure-u-1"
-                    :onClick   #(om/transact! app (fn [a] (assoc a :component :add)))
+                    :onClick   #(om/transact! app (fn [a] (assoc a :component :add
+                                                                   :current-date current-focus-date)))
                     } "Add"))
       )))
 
@@ -135,6 +137,26 @@
          (apply str (take (- 6 (count s-hex)) (repeat "0")))
          s-hex)))
 
+(defn touch-end-check [e owner state]
+  (let [touch-end (-> e (.-changedTouches) (aget 0))]
+    (if (and (:touch-start state))
+      (cond
+        ; isn't yet swiped
+        (and
+          (not (:swiped state))
+          (> 20 (Math/abs (- (.-pageY (:touch-start state)) (.-pageY touch-end))))
+          (< 30 (- (.-pageX (:touch-start state)) (.-pageX touch-end))))
+        (om/update-state! owner #(assoc % :swiped true :touch-start nil))
+
+        ; is swiped
+        (and 
+          (:swiped state)
+          (> 20 (Math/abs (- (.-pageY (:touch-start state)) (.-pageY touch-end))))
+          (< 30 (- (.-pageX touch-end) (.-pageX (:touch-start state)))))
+        (om/update-state! owner #(assoc % :swiped false :touch-start nil)))
+      (om/update-state! owner #(assoc % :swiped false :touch-start nil)))))
+
+
 (defn expense-list-item [item owner]
   (reify
     om/IInitState
@@ -144,72 +166,43 @@
     (render-state [_ state]
       (dom/li #js {:className "pure-u-1"
                    :onTouchStart (fn [e] (om/set-state! owner :touch-start (-> e (.-changedTouches) (aget 0))))
-                   :onTouchEnd   (fn [e] (let [touch-end (-> e (.-changedTouches) (aget 0))]
-                                           (if
-                                             (and
-                                               (:touch-start state)
-                                               )
-                                             (cond
-                                               (and 
-                                                 (not (:swiped state))
-                                                 (> 20 (Math/abs (- (.-pageY (:touch-start state))
-                                                                    (.-pageY touch-end)))) 
-                                                 (< 30 (- (.-pageX (:touch-start state))
-                                                          (.-pageX touch-end))))
-                                               (om/update-state! owner #(assoc % :swiped true
-                                                                                 :touch-start nil))
-
-                                               (and 
-                                                 (:swiped state)
-                                                 (> 20 (Math/abs (- (.-pageY (:touch-start state))
-                                                                    (.-pageY touch-end)))) 
-                                                 (< 30 (- (.-pageX touch-end)
-                                                          (.-pageX (:touch-start state))
-                                                          )))
-                                               (om/update-state! owner #(assoc % :swiped false
-                                                                                 :touch-start nil)))
-
-                                             (om/update-state! owner #(assoc % :swiped false
-                                                                               :touch-start nil)) 
-                                             )))}
-        ; date box
-        (if (:swiped state)
-          (dom/div #js {:className "pure-u-1 inner"}
-                   (dom/div #js {:className "pure-u-1-2 listbutton edit"
-                                 :onClick (fn [e] 
-                                            (.preventDefault e)
-                                            (om/update-state! owner #(assoc % :swiped false
-                                                                              :touch-start nil)) 
-                                            (put! (om/get-shared owner :event-chan)
-                                                        {:message :edit :value item}))
-                                 }
-                            "EDIT")
-                   (dom/div #js {:className "pure-u-1-2 listbutton del"
-                                 :onClick (fn [e] 
-                                            (.preventDefault e)
-                                            (om/update-state! owner #(assoc % :swiped false
-                                                                              :touch-start nil)) 
-                                            (put! (om/get-shared owner :event-chan)
-                                                  {:message :delete :value item}))}
-
-                            "DELETE"))
-          (dom/div #js {:className "pure-u-1 inner"}
-                   (dom/div #js {:className "pure-u-1"}
-                            (dom/span #js{:className "time"}
-                                      (gstring/format "%02d:%02d"
-                                                      (.getHours (.get item "date"))
-                                                      (.getMinutes (.get item "date"))))
-                            (dom/span #js{:className "date"}
-                                      (gstring/format "%02d-%02d-%d"
-                                                      (.getDate (.get item "date"))
-                                                      (inc (.getMonth (.get item "date")))
-                                                      (.getFullYear (.get item "date"))
-                                                      ))
-                            (dom/span #js {:className "category-button"
-                                           :style #js {:backgroundColor (string-to-color (.get item "category"))}
-                                           } (.get  item "category"))
-                            (dom/h3 #js {:className "amount"} (str (.get item "amount") "円")))
-                   (dom/div #js {:className "pure-u-1 note"} (.get item "note"))))))))
+                   :onTouchEnd   (fn [e] (touch-end-check e owner state))}
+              ; date box
+              (if (:swiped state)
+                (dom/div #js {:className "pure-u-1 inner"}
+                         (dom/div #js {:className "pure-u-1-2 listbutton edit"
+                                       :onClick (fn [e] 
+                                                  (.preventDefault e)
+                                                  (om/update-state! owner #(assoc % :swiped false
+                                                                                  :touch-start nil)) 
+                                                  (put! (om/get-shared owner :event-chan)
+                                                        {:message :edit :value item}))}
+                                  "EDIT")
+                         (dom/div #js {:className "pure-u-1-2 listbutton del"
+                                       :onClick (fn [e] 
+                                                  (.preventDefault e)
+                                                  (om/update-state! owner #(assoc % :swiped false
+                                                                                  :touch-start nil)) 
+                                                  (put! (om/get-shared owner :event-chan)
+                                                        {:message :delete :value item}))}
+                                  "DELETE"))
+                (dom/div #js {:className "pure-u-1 inner"}
+                         (dom/div #js {:className "pure-u-1"}
+                                  (dom/span #js{:className "time"}
+                                            (gstring/format "%02d:%02d"
+                                                            (.getHours (.get item "date"))
+                                                            (.getMinutes (.get item "date"))))
+                                  (dom/span #js{:className "date"}
+                                            (gstring/format "%02d-%02d-%d"
+                                                            (.getDate (.get item "date"))
+                                                            (inc (.getMonth (.get item "date")))
+                                                            (.getFullYear (.get item "date"))
+                                                            ))
+                                  (dom/span #js {:className "category-button"
+                                                 :style #js {:backgroundColor (string-to-color (.get item "category"))}
+                                                 } (.get  item "category"))
+                                  (dom/h3 #js {:className "amount"} (str (.get item "amount") "円")))
+                         (dom/div #js {:className "pure-u-1 note"} (.get item "note"))))))))
 
 (defn expense-list-component [items owner]
   (reify
@@ -243,28 +236,26 @@
     om/IInitState
       (init-state [_]
         (let [focus-chan (chan)
-              now (js/Date.)]
+              now (if (:current-date app)
+                    (:current-date app)
+                    (js/Date.))]
           (go
             (loop []
               (let [new-focus (<! focus-chan)]
                 (om/update-state! owner #(merge % new-focus)))
               (recur)))
-          {:current-focus     {:span :day :category nil}
+          {:current-focus      {:span :day :category nil}
            :current-focus-date now
            :focus-chan         focus-chan}))
     om/IRenderState
       (render-state [_ {:keys [focus-chan current-focus current-focus-date]}]
-        (let [current-items (sort-by (fn [item] (-> 
-                                                  item 
-                                                  (.get "date") 
-                                                  .getTime 
-                                                  -))
+        (let [current-items (sort-by (fn [item] (-> item (.get "date") .getTime -))
                                      (filter-items current-focus current-focus-date (app :expenses)))]
           (dom/div #js {:className "pure-g"}
             ; change date / add buttons
             (om/build buttons-component app {:init-state {:focus-chan         focus-chan} 
-                                            :state       {:current-focus      current-focus
-                                                          :current-focus-date current-focus-date}})
+                                             :state      {:current-focus      current-focus
+                                                         :current-focus-date current-focus-date}})
             ; total
             (om/build total-component current-items)
             ; list for day
@@ -387,34 +378,32 @@
     om/IInitState
     (init-state [_]
       (let [add-chan (chan)]
-      (go
-        (loop []
-          (let [v (<! add-chan)]
-            (cond
-              (:category v) (om/update-state! owner 
-                              #(assoc % :category (:category v) 
-                                        :current :amount))
+        (go
+          (loop []
+            (let [v (<! add-chan)]
+              (cond
+                (:category v)
+                (om/update-state! owner #(assoc % :category (:category v) 
+                                                  :current :amount))
 
-              (:amount v)   (om/update-state! owner 
-                              #(assoc % :amount (js/parseInt (:amount v) 10)
-                                        :current :note))
+                (:amount v)   
+                (om/update-state! owner #(assoc % :amount (js/parseInt (:amount v) 10) 
+                                                  :current :note))
 
-              (:note v) (let [new-expense {:date (js/Date.)
-                                           :category (om/get-state owner :category) 
-                                           :amount (om/get-state owner :amount) 
-                                           :note (:note v)}]
-                          (put-expense (:table (om/get-shared owner))
-                                       new-expense)
-                          (om/transact! app
-                                        #(assoc % :component :main
-                                                :expenses (get-expenses (:table (om/get-shared owner))))))
-              :else
-              (om/transact! app
-                #(assoc % :component :main)))
-            (recur))
-          ))
-      {:ch      add-chan 
-       :current :category}))
+                (:note v) 
+                (let [new-expense {:date (:current-date @app)
+                                   :category (om/get-state owner :category) 
+                                   :amount (om/get-state owner :amount) 
+                                   :note (:note v)}]
+                  (put-expense (:table (om/get-shared owner)) new-expense)
+                  (om/transact! app #(assoc % :component :main
+                                              :expenses (get-expenses (:table (om/get-shared owner))))))
+                :else
+                (om/transact! app #(assoc % :component :main)))
+              (recur))))
+        ;return state
+        {:ch add-chan 
+         :current :category}))
     om/IRenderState
     (render-state [_ state]
       (om/build 
@@ -477,6 +466,31 @@
                                       )})) 
         )))))
 
+;; list
+;; -----------------------------------------------------------------------------
+
+(defn day-item-component [item owner]
+  (om/component
+    (dom/li #js {:className "pure-u-1"
+                 :onClick (fn [e] (put! (:event-chan (om/get-shared owner))
+                                        {:message :date :value (:date item)}))}
+      (dom/div #js {:className "pure-u-1-2 list-date"}
+                               (gstring/format "%02d-%02d-%d"
+                                               (.getDate (:date item))
+                                               (inc (.getMonth (:date item)))
+                                               (.getFullYear (:date item))))
+      (dom/div #js {:className "pure-u-1-2 list-total"
+                    :style #js {:text-align "right"}} (str (:total item) "円")))))
+
+
+(defn days-list-component [app owner]
+  (let [days (map (fn [[k v]] {:date k
+                               :total (apply + (map #(.get % "amount") v))})
+                  (group-by #(.get % "date") (:expenses app)))]
+    (om/component
+      (apply dom/ul nil 
+        (om/build-all day-item-component days)))))
+
 ;; error
 ;; -----------------------------------------------------------------------------
 
@@ -523,21 +537,29 @@
                 (om/transact! app
                               #(assoc % :component :main
                                         :expenses (get-expenses (:table (om/get-shared owner)))))))
+              (= :date (:message ev))
+              (let [new-date (:value ev)]
+                (om/transact! app
+                              #(assoc % :component :main
+                                        :current-date new-date)))
 
-            (recur)
-            ))))
+            (recur)))))
     om/IRender
     (render [_]
       (dom/div #js {:id "app-layout" 
                     :className (if (app :menu-open) "active" "closed")}
                (om/build menu-component app)
                (dom/div #js {:className "header"}
-                        (dom/h1 #js {:onClick (fn [e] (om/transact! app #(assoc % :component :main)))} "expenses"))
+                        (dom/h1 #js {:onClick 
+                                     (fn [e] 
+                                       (om/transact! app #(assoc % :component :main
+                                                                   :current-date nil)))} "expenses"))
                (om/build
                  (case (app :component)
                    :main  main-component
                    :add   add-component
                    :edit  edit-component
+                   :list  days-list-component
                    :error error-component
                    loading)
                  app
