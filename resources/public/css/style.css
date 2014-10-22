@@ -379,3 +379,22 @@ Add transition to containers so they can push in and out.
   .listbutton.edit  {
     background-color: #0af;
   }
+
+ul.daylist {
+  padding: 0;
+  margin: 0;
+}
+ul.daylist li{
+  padding: 0;
+  margin: 0;
+  padding-left: 10px;
+  padding-right: 10px;
+  height: 3em;
+  line-height: 3em;
+  border-bottom: 1px solid #0af;
+}
+
+.list-date {
+  color: #444;
+}
+

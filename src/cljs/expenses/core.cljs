@@ -489,7 +489,7 @@
                   (group-by #(doto (.get % "date") (.setHours 0 0 0 0)) 
                             (:expenses app))))]
     (om/component
-      (apply dom/ul nil 
+      (apply dom/ul #js {:className "daylist"}
         (om/build-all day-item-component days)))))
 
 ;; error
