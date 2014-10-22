@@ -67,7 +67,9 @@
                 #js {:onClick 
                      (fn [e]
                        (.preventDefault e)
-                       (om/transact! app #(assoc % :component :loading :menu-open false)))}
+                       (om/transact! app #(assoc % :component :main
+                                                   :current-date (js/Date.)
+                                                   :menu-open false)))}
                 "TOP"))
             (dom/li nil
               (dom/a
@@ -167,42 +169,42 @@
       (dom/li #js {:className "pure-u-1"
                    :onTouchStart (fn [e] (om/set-state! owner :touch-start (-> e (.-changedTouches) (aget 0))))
                    :onTouchEnd   (fn [e] (touch-end-check e owner state))}
-              ; date box
-              (if (:swiped state)
-                (dom/div #js {:className "pure-u-1 inner"}
-                         (dom/div #js {:className "pure-u-1-2 listbutton edit"
-                                       :onClick (fn [e] 
-                                                  (.preventDefault e)
-                                                  (om/update-state! owner #(assoc % :swiped false
-                                                                                  :touch-start nil)) 
-                                                  (put! (om/get-shared owner :event-chan)
-                                                        {:message :edit :value item}))}
-                                  "EDIT")
-                         (dom/div #js {:className "pure-u-1-2 listbutton del"
-                                       :onClick (fn [e] 
-                                                  (.preventDefault e)
-                                                  (om/update-state! owner #(assoc % :swiped false
-                                                                                  :touch-start nil)) 
-                                                  (put! (om/get-shared owner :event-chan)
-                                                        {:message :delete :value item}))}
-                                  "DELETE"))
-                (dom/div #js {:className "pure-u-1 inner"}
-                         (dom/div #js {:className "pure-u-1"}
-                                  (dom/span #js{:className "time"}
-                                            (gstring/format "%02d:%02d"
-                                                            (.getHours (.get item "date"))
-                                                            (.getMinutes (.get item "date"))))
-                                  (dom/span #js{:className "date"}
-                                            (gstring/format "%02d-%02d-%d"
-                                                            (.getDate (.get item "date"))
-                                                            (inc (.getMonth (.get item "date")))
-                                                            (.getFullYear (.get item "date"))
-                                                            ))
-                                  (dom/span #js {:className "category-button"
-                                                 :style #js {:backgroundColor (string-to-color (.get item "category"))}
-                                                 } (.get  item "category"))
-                                  (dom/h3 #js {:className "amount"} (str (.get item "amount") "円")))
-                         (dom/div #js {:className "pure-u-1 note"} (.get item "note"))))))))
+      ; date box
+      (if (:swiped state)
+        (dom/div #js {:className "pure-u-1 inner"}
+                  (dom/div #js {:className "pure-u-1-2 listbutton edit"
+                                :onClick (fn [e] 
+                                          (.preventDefault e)
+                                          (om/update-state! owner #(assoc % :swiped false
+                                                                            :touch-start nil)) 
+                                          (put! (om/get-shared owner :event-chan)
+                                                {:message :edit :value item}))}
+                          "EDIT")
+                  (dom/div #js {:className "pure-u-1-2 listbutton del"
+                                :onClick (fn [e] 
+                                          (.preventDefault e)
+                                          (om/update-state! owner #(assoc % :swiped false
+                                                                          :touch-start nil)) 
+                                          (put! (om/get-shared owner :event-chan)
+                                                {:message :delete :value item}))}
+                          "DELETE"))
+        (dom/div #js {:className "pure-u-1 inner"}
+                  (dom/div #js {:className "pure-u-1"}
+                          (dom/span #js{:className "time"}
+                                    (gstring/format "%02d:%02d"
+                                                    (.getHours (.get item "date"))
+                                                    (.getMinutes (.get item "date"))))
+                          (dom/span #js{:className "date"}
+                                    (gstring/format "%02d-%02d-%d"
+                                                    (.getDate (.get item "date"))
+                                                    (inc (.getMonth (.get item "date")))
+                                                    (.getFullYear (.get item "date"))
+                                                    ))
+                          (dom/span #js {:className "category-button"
+                                          :style #js {:backgroundColor (string-to-color (.get item "category"))}
+                                          } (.get  item "category"))
+                          (dom/h3 #js {:className "amount"} (str (.get item "amount") "円")))
+                  (dom/div #js {:className "pure-u-1 note"} (.get item "note"))))))))
 
 (defn expense-list-component [items owner]
   (reify
@@ -419,7 +421,7 @@
   (reify
     om/IInitState
     (init-state [_]
-      ( let [item (:current-item app)] 
+      (let [item (:current-item app)] 
        {
         :category (.get item "category")
         :amount (.get item "amount")
@@ -528,6 +530,7 @@
       (go
         (loop []
           (let [ev (<! (:event-chan (om/get-shared owner)))]
+            (print ev)
             (cond
               (= :edit (:message ev))
               (om/transact! app #(assoc % :component :edit
@@ -537,34 +540,34 @@
                 (.deleteRecord (:value ev))
                 (om/transact! app
                               #(assoc % :component :main
-                                        :expenses (get-expenses (:table (om/get-shared owner)))))))
+                                        :expenses (get-expenses (:table (om/get-shared owner))))))
               (= :date (:message ev))
               (let [new-date (:value ev)]
                 (om/transact! app
                               #(assoc % :component :main
-                                        :current-date new-date)))
+                                        :current-date new-date))))
 
             (recur)))))
     om/IRender
     (render [_]
+      (print app)
       (dom/div #js {:id "app-layout" 
                     :className (if (app :menu-open) "active" "closed")}
-               (om/build menu-component app)
-               (dom/div #js {:className "header"}
-                        (dom/h1 #js {:onClick 
-                                     (fn [e] 
-                                       (om/transact! app #(assoc % :component :main
-                                                                   :current-date nil)))} "expenses"))
-               (om/build
-                 (case (app :component)
-                   :main  main-component
-                   :add   add-component
-                   :edit  edit-component
-                   :list  days-list-component
-                   :error error-component
-                   loading)
-                 app
-                 )))))
+        (om/build menu-component app)
+        (dom/div #js {:className "header"}
+          (dom/h1 #js {:onClick 
+                       (fn [e] (om/transact! app #(assoc % :component :main)))}
+                  "expenses"))
+        (om/build
+          (case (app :component)
+            :main  main-component
+            :add   add-component
+            :edit  edit-component
+            :list  days-list-component
+            :error error-component
+            loading)
+          app
+          )))))
 
 ;; Initialize
 ;; -----------------------------------------------------------------------------
