@@ -332,6 +332,17 @@ Add transition to containers so they can push in and out.
     background: #0af;
     border: 1px solid #0af;
   }
+
+  .pure-button-danger {
+    background: rgb(202, 60, 60);
+    color: white;
+    margin-bottom: 30px;
+  }
+
+  .cancel {
+    margin-top: 10px;
+  }
+
   #app-layout h3, #app-layout h4 {
     margin: 0px;
     padding: 0px;
@@ -351,7 +362,4 @@ Add transition to containers so they can push in and out.
     height: 3em;
     line-height: 3em;
     border: 1px solid #0af;
-  }
-  #app-layout .pure-form input[type=text] {
-
   }
