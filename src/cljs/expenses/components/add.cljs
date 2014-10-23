@@ -134,7 +134,7 @@
                                    :category (om/get-state owner :category) 
                                    :amount (om/get-state owner :amount) 
                                    :note (:note v)}]
-                  ;(db/put-expense (:table (om/get-shared owner)) new-expense)
+                  (db/put-expense (:table (om/get-shared owner)) new-expense)
                   (om/transact! app #(assoc % :component :main
                                               :expenses (db/get-expenses (:table (om/get-shared owner))))))
                 :else
