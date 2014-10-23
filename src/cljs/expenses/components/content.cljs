@@ -89,7 +89,9 @@
     (render-state [_ state]
       (dom/li #js {:className "pure-u-1"
                    :onTouchStart (fn [e] (om/set-state! owner :touch-start (-> e (.-changedTouches) (aget 0))))
-                   :onTouchEnd   (fn [e] (touch-end-check e owner state))}
+                   :onTouchEnd   (fn [e] (touch-end-check e owner state))
+                   :onDoubleClick (fn [e] (.preventDefault e) (om/update-state! owner [:swiped] not))
+                   }
       ; date box
       (if (:swiped state)
         (dom/div #js {:className "pure-u-1 inner"}
