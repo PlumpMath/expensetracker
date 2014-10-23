@@ -7,9 +7,10 @@
             [goog.string :as gstring]
             [goog.string.format :as gformat]
             ;local
-            [expenses.components.menu :as menu] 
             [expenses.components.content :as content]
+            [expenses.components.menu :as menu] 
             [expenses.components.add :as add]
+            [expenses.components.list :as list]
             [expenses.db :as db]
             ; debug
             ;[figwheel.client :as fw :include-macros true]
@@ -26,31 +27,6 @@
 
 (def db-client (db/get-client))
 
-;; list
-;; -----------------------------------------------------------------------------
-
-(defn day-item-component [item owner]
-  (om/component
-    (dom/li #js {:className "pure-u-1"
-                 :onClick (fn [e] (put! (:event-chan (om/get-shared owner))
-                                        {:message :date :value (:date item)}))}
-      (dom/div #js {:className "pure-u-1-2 list-date"}
-                               (gstring/format "%02d-%02d-%d"
-                                               (.getDate (:date item))
-                                               (inc (.getMonth (:date item)))
-                                               (.getFullYear (:date item))))
-      (dom/div #js {:className "pure-u-1-2 list-total"
-                    :style #js {:text-align "right"}} (str (:total item) "円")))))
-
-
-(defn days-list-component [app owner]
-  (let [days (sort-by #(-> % :date .getTime -)
-                (map (fn [[k v]] {:date k :total (apply + (map #(.get % "amount") v))})
-                  (group-by #(doto (.get % "date") (.setHours 0 0 0 0)) 
-                            (:expenses app))))]
-    (om/component
-      (apply dom/ul #js {:className "daylist"}
-        (om/build-all day-item-component days)))))
 
 ;; error
 ;; -----------------------------------------------------------------------------
@@ -118,8 +94,8 @@
           (case (app :component)
             :main  content/main-component
             :add   add/add-component
-            :edit  edit-component
-            :list  days-list-component
+            :edit  add/edit-component
+            :list  list/days-list-component
             :error error-component
             loading)
           app)))))
@@ -150,4 +126,4 @@
                                  }})
               )))))))
 
-(.authenticate db-client nil main)
+  (.authenticate db-client nil main)
