@@ -128,7 +128,6 @@
                 (:amount v)   
                 (om/update-state! owner #(assoc % :amount (js/parseInt (:amount v) 10) 
                                                   :current :note))
-
                 (:note v) 
                 (let [new-expense {:date (:current-date @app)
                                    :category (om/get-state owner :category) 
@@ -152,6 +151,9 @@
           category-select)
         app
         {:init-state state}))))
+
+;; edit
+;; -----------------------------------------------------------------------------
 
 (defn edit-component [app owner]
   (reify
