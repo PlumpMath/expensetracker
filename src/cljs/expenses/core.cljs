@@ -12,13 +12,6 @@
 
 ;; -----------------------------------------------------------------------------
 
-(def DEBUG true)
-
-(when DEBUG
-  (enable-console-print!)
-  (fw/watch-and-reload
-    :websocket-url   "ws://192.168.7.21:3449/figwheel-ws"
-    :jsload-callback (fn [] (print "reloaded"))))
 
 ;; touch events 
 ;; -----------------------------------------------------------------------------
@@ -35,8 +28,8 @@
 (defn put-expense [table options] 
   (.insert table (clj->js options)))
 
-(def db-cred (clj->js {:key "l66k7gnikqojlup"}))
-(def db-client (js/Dropbox.Client. db-cred))
+(def db-cred #js {:key  "l66k7gnikqojlup"})
+(def db-client (Dropbox.Client. db-cred))
 
 ;; util
 ;; -----------------------------------------------------------------------------
@@ -514,7 +507,6 @@
       (go
         (loop []
           (let [ev (<! (:event-chan (om/get-shared owner)))]
-            (print ev)
             (cond
               (= :edit (:message ev))
               (om/transact! app #(assoc % :component :edit
@@ -534,7 +526,6 @@
             (recur)))))
     om/IRender
     (render [_]
-      (print app)
       (dom/div #js {:id "app-layout" 
                     :className (if (app :menu-open) "active" "closed")}
         (om/build menu-component app)

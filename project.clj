@@ -20,8 +20,7 @@
   :plugins [[lein-cljsbuild "1.0.3"]
             [lein-figwheel "0.1.4-SNAPSHOT"]]
   :figwheel {:http-server-root "public" :port 3449
-             :css-dirs ["resources/public/css"]
-             }
+             :css-dirs ["resources/public/css"]}
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
                         :compiler {:output-to "resources/public/main.js"
@@ -33,5 +32,9 @@
                         :compiler {:output-to "resources/public/main-min.js"
                                    :optimizations :advanced
                                    :pretty-print false
-                                   :preamble ["react/react.min.js"]
-                                   :externs ["react/externs/react.js"]}}]})
+                                   :closure-warnings {:externs-validation :off
+                                                      :non-standard-jsdoc :off}
+                                   :preamble ["public/js/react/react_with_addons.min.js"  
+                                              "public/js/dropbox-datastores-1.2.0.js"]
+                                   :externs ["public/js/react/react_with_addons.js" 
+                                             "externs/db-datastore.js"]}}]})
