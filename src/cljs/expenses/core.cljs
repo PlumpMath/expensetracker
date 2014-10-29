@@ -42,8 +42,9 @@
   (let [data nil]
     (om/transact! app
       #(assoc %
-              :component  :main
-              :expenses   (db/get-expenses (:table (om/get-shared owner)))
+              :current-date (js/Date.)
+              :component :main
+              :expenses (db/get-expenses (:table (om/get-shared owner)))
               ))))
 
 (defn loading [app owner]

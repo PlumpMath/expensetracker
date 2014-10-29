@@ -9,7 +9,7 @@
 ;; util
 ;; -----------------------------------------------------------------------------
 
-(defn adj-date [date span n]
+(defn adj-date [span date n]
   (case span
     :day   (js/Date. (.getFullYear date)       (.getMonth date)       (+ n (.getDate date)))
     :month (js/Date. (.getFullYear date)       (+ n (.getMonth date)) (.getDate date))
@@ -20,32 +20,30 @@
 
 (defn buttons-component [app owner]
   (reify
-    om/IRenderState
-    (render-state [_ {:keys [focus-chan current-focus current-focus-date]}]
-      (dom/div #js {:className "pure-u-1 buttons"}
-        (dom/div                    
-          #js {:className "pure-u-1-6 back"
-               :onClick #(put! focus-chan 
-                               {:current-focus-date 
-                                (adj-date current-focus-date (:span current-focus) -1)})}
-                "<")
-        (dom/div 
-          #js {:className "pure-u-2-3"
-               :onClick #(put! focus-chan {:current-focus-date (js/Date.)})}
-          (gstring/format "%02d-%02d-%d"
-                        (.getDate current-focus-date)
-                        (inc (.getMonth current-focus-date))
-                        (.getFullYear current-focus-date)))
-        (dom/div 
-          #js {:className "pure-u-1-6 forward"
-               :onClick #(put! focus-chan
-                               {:current-focus-date 
-                                (adj-date current-focus-date (:span current-focus) 1)})}
-          ">")
-      (dom/div #js {:className "pure-u-1"
-                    :onClick   #(om/transact! app (fn [a] (assoc a :component :add
-                                                                   :current-date current-focus-date)))
-                    } "Add")))))
+    om/IRender
+    (render [_]
+      (let [current-date (:current-date app)]
+        (dom/div #js {:className "pure-u-1 buttons"}
+          ; < backward 1 day
+          (dom/div
+            #js {:className "pure-u-1-6 back"
+                :onClick #(om/transact! app (fn [a] (assoc a :current-date (adj-date :day current-date -1))))}
+            "<")
+          (dom/div 
+            #js {:className "pure-u-2-3"
+                :onClick #(om/transact! app (fn [a] (assoc a :current-date (js.Date.))))}
+            (gstring/format "%02d-%02d-%d"
+                            (.getDate current-date)
+                            (inc (.getMonth current-date))
+                            (.getFullYear current-date)))
+          ; forward 1 day >
+          (dom/div 
+            #js {:className "pure-u-1-6 forward"
+                :onClick #(om/transact! app (fn [a] (assoc a :current-date (adj-date :day current-date 1))))} 
+            ">")
+          (dom/div #js {:className "pure-u-1"
+                        :onClick #(om/transact! app (fn [a] (assoc a :component :add)))
+                        } "Add"))))))
 
 (defn total-component [items owner]
   (reify
@@ -140,49 +138,31 @@
         (apply dom/ul #js {:className "pure-u-1 expense-list" }
                       (om/build-all expense-list-item items))))))
 
-(defn filter-items [{:keys [span category]} f-date items]
+(defn filter-items [span date items]
   (filter
-    #(and
-       (case span
-         :day   (= (.getDate  f-date) 
-                   (.getDate  (.get % "date")))
-         :month (= (.getMonth f-date) 
-                   (.getMonth (.get % "date")))
-         :year  (= (.getYear  f-date) 
-                   (.getYear  (.get % "date")))
-         true)
-       (case category
-         nil true
-         (= category (:category %))))
+    #(case span
+       :day   (= (.getDate  date) 
+                 (.getDate  (.get % "date")))
+       :month (= (.getMonth date) 
+                 (.getMonth (.get % "date")))
+       :year  (= (.getYear  date) 
+                 (.getYear  (.get % "date")))
+       true)
     items))
 
 (defn main-component [app owner]
   (reify
-    om/IInitState
-      (init-state [_]
-        (let [focus-chan (chan)
-              now (if (:current-date app)
-                    (:current-date app)
-                    (js/Date.))]
-          (go
-            (loop []
-              (let [new-focus (<! focus-chan)]
-                (om/update-state! owner #(merge % new-focus)))
-              (recur)))
-          {:current-focus      {:span :day :category nil}
-           :current-focus-date now
-           :focus-chan         focus-chan}))
-    om/IRenderState
-      (render-state [_ {:keys [focus-chan current-focus current-focus-date]}]
-        (let [current-items (sort-by (fn [item] (-> item (.get "date") .getTime -))
-                                     (filter-items current-focus current-focus-date (app :expenses)))]
-          (dom/div #js {:className "pure-g"}
-            ; change date / add buttons
-            (om/build buttons-component app {:init-state {:focus-chan         focus-chan} 
-                                             :state      {:current-focus      current-focus
-                                                         :current-focus-date current-focus-date}})
-            ; total
-            (om/build total-component current-items)
-            ; list for day
-            (om/build expense-list-component current-items)
-            )))))
+    om/IRender
+    (render [_]
+      (let [current-items (sort-by (fn [item] (-> item (.get "date") .getTime -))
+                                   (filter-items :day (:current-date app) (:expenses app)))]
+        (dom/div #js {:className "pure-g"}
+                 ; change date / add buttons
+                 (om/build buttons-component app {:init-state {:focus-chan         focus-chan} 
+                                                  :state      {:current-focus      current-focus
+                                                               :current-focus-date current-focus-date}})
+                 ; total
+                 (om/build total-component current-items)
+                 ; list for day
+                 (om/build expense-list-component current-items)
+                 )))))
