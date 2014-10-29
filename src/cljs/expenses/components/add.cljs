@@ -3,7 +3,7 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :refer [put! chan <!]]
-            [expenses.date-util :as date-util]
+            [expenses.dateutil :as date-util]
             [expenses.db :as db]
             ))
 ;; add
@@ -13,7 +13,6 @@
   (reify
     om/IRenderState
     (render-state [_ state]
-      (print state)
       (dom/div #js {:className "pure-u-1"}
         ; add new --------------------------------------------------------------
         (dom/h3 #js {:className "pure-u-1"} "NEW")

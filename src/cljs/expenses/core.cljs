@@ -8,7 +8,6 @@
             [expenses.components.menu :as menu] 
             [expenses.components.add :as add]
             [expenses.components.list :as listc]
-            [expenses.date-util :as date-util]
             [expenses.db :as db]
             ; debug
             ;[figwheel.client :as fw :include-macros true]

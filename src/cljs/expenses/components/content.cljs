@@ -3,7 +3,7 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :refer [put! chan <!]]
-            [expenses.date-util :as date-util]
+            [expenses.dateutil :as date-util]
             ))
 
 ;; main
@@ -140,9 +140,7 @@
                                    (filter-items :day (:current-date app) (:expenses app)))]
         (dom/div #js {:className "pure-g"}
                  ; change date / add buttons
-                 (om/build buttons-component app {:init-state {:focus-chan         focus-chan} 
-                                                  :state      {:current-focus      current-focus
-                                                               :current-focus-date current-focus-date}})
+                 (om/build buttons-component app)
                  ; total
                  (om/build total-component current-items)
                  ; list for day

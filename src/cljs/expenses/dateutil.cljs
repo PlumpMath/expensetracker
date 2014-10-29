@@ -1,4 +1,4 @@
-(ns expenses.date-util
+(ns expenses.dateutil
   (:require
     [goog.string :as gstring]
     [goog.string.format :as gformat]))
