@@ -3,17 +3,19 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :refer [put! chan <!]]
+            [expenses.date-util :as date-util]
             [expenses.db :as db]
             ))
 ;; add
 ;; -----------------------------------------------------------------------------
 
-(defn category-select [app owner]
+(defn category-form [app owner]
   (reify
     om/IRenderState
     (render-state [_ state]
-      (dom/div #js  {:className "pure-u-1"}
-        ; add new
+      (print state)
+      (dom/div #js {:className "pure-u-1"}
+        ; add new --------------------------------------------------------------
         (dom/h3 #js {:className "pure-u-1"} "NEW")
         (dom/form #js {:className "pure-form pure-g"}
           (dom/div #js {:className "pure-u-3-4 wrapper"}
@@ -22,13 +24,12 @@
                     (dom/input #js {:type "submit" 
                                     :className "pure-input-1 pure-button pure-button-primary" 
                                     :value "OK"
-                                    :onClick (fn [e]
-                                              (.preventDefault e)
+                                    :onClick (fn [e] (.preventDefault e)
                                               (let [v (-> (om/get-node owner "category-input") .-value)]
                                                 (when (not (empty? v))
                                                   (put! (:ch state) 
                                                         {:category v}))))})))
-        ; select previous
+        ; select previous ------------------------------------------------------
         (let [categories (distinct (map #(.get % "category") (:expenses app)))]
           (when (not-empty categories)
             (dom/h3 #js {:className "pure-u-1"} "PREVIOUS")
@@ -40,77 +41,86 @@
                                  (.toUpperCase %)))
                      categories
                      ))))
-        (dom/div #js {:className "pure-form wrapper cancel"}
-                 (dom/input #js {:type "submit" 
-                                 :className "pure-input-1 pure-button pure-button-danger" 
-                                 :value "CANCEL"
-                                 :onClick (fn [e]
-                                            (.preventDefault e)
-                                            (om/transact! app #(assoc % :component :main))
-                                            )}))))))
+        ))))
 
-(defn amount-enter [app owner]
+(defn amount-form [app owner]
   (reify
     om/IRenderState 
     (render-state [_ state]
-      (dom/div nil 
-        (dom/h3 #js {:className "pure-u-1"} "CATEGORY")
-        (dom/h4 #js {:className "pure-u-1"} (.toUpperCase (:category state)))
+      (dom/div #js {:className "pure-u-1"} 
         (dom/h3 #js {:className "pure-u-1"} "AMOUNT")
         (dom/form #js {:className "pure-form pure-g"}
           (dom/div #js {:className "pure-u-3-4 wrapper"}
-            (dom/input #js {:ref "amount-input" :type "number" :autoFocus true :className "pure-input-1"}))
-            (dom/div #js {:className "pure-u-1-4 wrapper"}
-              (dom/input #js {:type "submit" 
-                              :className "pure-input-1 pure-button pure-button-primary" 
-                              :value "OK"
-                              :onClick (fn [e]
-                                        (.preventDefault e)
-                                        (let [v (-> (om/get-node owner "amount-input") .-value)]
-                                          (when (not (empty? v))
-                                            (put! (:ch state) 
-                                                  {:amount v}))))})))
+                  (dom/input #js {:ref "amount-input" :type "number" :autoFocus true :className "pure-input-1"}))
+          (dom/div #js {:className "pure-u-1-4 wrapper"}
+                  (dom/input #js {:type "submit" 
+                                  :className "pure-input-1 pure-button pure-button-primary" 
+                                  :value "OK"
+                                  :onClick (fn [e] (.preventDefault e)
+                                             (let [v (-> (om/get-node owner "amount-input") .-value)]
+                                               (when (not (empty? v))
+                                                 (put! (:ch state) 
+                                                       {:amount v}))))})))
 
-        (dom/div #js {:className "pure-form wrapper cancel"}
-                 (dom/input #js {:type "submit" 
-                                 :className "pure-input-1 pure-button pure-button-danger" 
-                                 :value "CANCEL"
-                                 :onClick (fn [e]
-                                            (.preventDefault e)
-                                            (om/transact! app #(assoc % :component :main))
-                                            )}))))))
+               ))))
 
-(defn note-enter [app owner]
+(defn note-form [app owner]
   (reify
-    om/IRenderState 
+    om/IRenderState
     (render-state [_ state]
-      (dom/div nil 
-        (dom/h3 #js {:className "pure-u-1"} "CATEGORY")
-        (dom/h4 #js {:className "pure-u-1"} (.toUpperCase (:category state)))
-        (dom/h3 #js {:className "pure-u-1"} "AMOUNT")
-        (dom/h4 #js {:className "pure-u-1"} (str (:amount state) "円"))
+      (dom/div #js {:className "pure-u-1"} 
         (dom/h3 #js {:className "pure-u-1"} "NOTE")
         (dom/form #js {:className "pure-form pure-g"}
           (dom/div #js {:className "pure-u-3-4 wrapper"}
             (dom/input #js {:ref "note-input" :type "text" :autoFocus true :className "pure-input-1"}))
-            (dom/div #js {:className "pure-u-1-4 wrapper"}
-              (dom/input #js {:type "submit"
-                              :className "pure-input-1 pure-button pure-button-primary" 
-                              :value "OK"
-                              :onClick (fn [e]
-                                        (.preventDefault e)
+          (dom/div #js {:className "pure-u-1-4 wrapper"}
+            (dom/input #js {:type "submit"
+                            :className "pure-input-1 pure-button pure-button-primary" 
+                            :value "OK"
+                            :onClick (fn [e] (.preventDefault e)
                                         (let [v (-> (om/get-node owner "note-input") .-value)]
                                           (when (not (empty? v))
                                             (put! (:ch state) 
                                                   {:note v}))))})))
+               ))))
+
+(defn wizard-component [app owner]
+  (reify
+    om/IRenderState 
+    (render-state [_ state]
+      (dom/div nil 
+
+        (dom/h3 #js {:className "pure-u-1"} "DATE")
+        (dom/h4 #js {:className "pure-u-1"}
+                (date-util/format-date (:current-date app)))
+
+        (when (:category state)
+          (dom/div nil
+                   (dom/h3 #js {:className "pure-u-1"} "CATEGORY")
+                   (dom/h4 #js {:className "pure-u-1"} (.toUpperCase (:category state)))))
+
+        (when (:amount state)
+          (dom/div nil 
+                   (dom/h3 #js {:className "pure-u-1"} "AMOUNT")
+                   (dom/h4 #js {:className "pure-u-1"} (str (:amount state) "円"))))
+
+        ; current form
+        (cond
+          (and (not (:category state)) (not (:amount state)))
+            (om/build category-form app {:state state})
+          (not (:amount state))
+            (om/build amount-form app {:init-state state})
+          :else
+            (om/build note-form app {:init-state state}))
+
+        ; cancel
         (dom/div #js {:className "pure-form wrapper cancel"}
-                 (dom/input #js {:type "submit" 
-                                 :className "pure-input-1 pure-button pure-button-danger" 
-                                 :value "CANCEL"
-                                 :onClick (fn [e]
-                                            (.preventDefault e)
-                                            (om/transact! app #(assoc % :component :main))
-                                            )}))))))
+          (dom/input #js {:type "submit" 
+                          :className "pure-input-1 pure-button pure-button-danger" 
+                          :value "CANCEL"
+                          :onClick (fn [e] (.preventDefault e)
+                                    (om/transact! app #(assoc % :component :main))
+                                    )}))))))
 
 (defn add-component [app owner]
   (reify
@@ -122,13 +132,10 @@
             (let [v (<! add-chan)]
               (cond
                 (:category v)
-                (om/update-state! owner #(assoc % :category (:category v) 
-                                                  :current :amount))
-
-                (:amount v)   
-                (om/update-state! owner #(assoc % :amount (js/parseInt (:amount v) 10) 
-                                                  :current :note))
-                (:note v) 
+                (om/update-state! owner #(assoc % :category (:category v)))
+                (:amount v)
+                (om/update-state! owner #(assoc % :amount (js/parseInt (:amount v) 10)))
+                (:note v)
                 (let [new-expense {:date (:current-date @app)
                                    :category (om/get-state owner :category) 
                                    :amount (om/get-state owner :amount) 
@@ -139,18 +146,10 @@
                 :else
                 (om/transact! app #(assoc % :component :main)))
               (recur))))
-        ;return state
-        {:ch add-chan 
-         :current :category}))
+        {:ch add-chan}))
     om/IRenderState
     (render-state [_ state]
-      (om/build 
-        (case (:current state)
-          :amount amount-enter
-          :note note-enter
-          category-select)
-        app
-        {:init-state state}))))
+      (om/build wizard-component app {:state state}))))
 
 ;; edit
 ;; -----------------------------------------------------------------------------
@@ -161,8 +160,8 @@
     (init-state [_]
       (let [item (:current-item app)] 
         {:category (.get item "category")
-         :amount (.get item "amount")
-         :note (.get item "note")}))
+         :amount   (.get item "amount")
+         :note     (.get item "note")}))
     om/IRenderState
     (render-state [_ state]
       (let [item (:current-item app)]

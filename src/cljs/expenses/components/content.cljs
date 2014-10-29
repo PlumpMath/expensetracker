@@ -3,17 +3,8 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :refer [put! chan <!]]
-            [goog.string :as gstring]
-            [goog.string.format :as gformat]
+            [expenses.date-util :as date-util]
             ))
-;; util
-;; -----------------------------------------------------------------------------
-
-(defn adj-date [span date n]
-  (case span
-    :day   (js/Date. (.getFullYear date)       (.getMonth date)       (+ n (.getDate date)))
-    :month (js/Date. (.getFullYear date)       (+ n (.getMonth date)) (.getDate date))
-    :year  (js/Date. (+ n (.getFullYear date)) (.getMonth date)       (.getDate date))))
 
 ;; main
 ;; -----------------------------------------------------------------------------
@@ -27,19 +18,16 @@
           ; < backward 1 day
           (dom/div
             #js {:className "pure-u-1-6 back"
-                :onClick #(om/transact! app (fn [a] (assoc a :current-date (adj-date :day current-date -1))))}
+                :onClick #(om/transact! app (fn [a] (assoc a :current-date (date-util/adj-date :day current-date -1))))}
             "<")
           (dom/div 
             #js {:className "pure-u-2-3"
                 :onClick #(om/transact! app (fn [a] (assoc a :current-date (js.Date.))))}
-            (gstring/format "%02d-%02d-%d"
-                            (.getDate current-date)
-                            (inc (.getMonth current-date))
-                            (.getFullYear current-date)))
+            (date-util/format-date current-date))
           ; forward 1 day >
           (dom/div 
             #js {:className "pure-u-1-6 forward"
-                :onClick #(om/transact! app (fn [a] (assoc a :current-date (adj-date :day current-date 1))))} 
+                :onClick #(om/transact! app (fn [a] (assoc a :current-date (date-util/adj-date :day current-date 1))))} 
             ">")
           (dom/div #js {:className "pure-u-1"
                         :onClick #(om/transact! app (fn [a] (assoc a :component :add)))
@@ -112,15 +100,9 @@
         (dom/div #js {:className "pure-u-1 inner"}
                   (dom/div #js {:className "pure-u-1"}
                           (dom/span #js{:className "time"}
-                                    (gstring/format "%02d:%02d"
-                                                    (.getHours (.get item "date"))
-                                                    (.getMinutes (.get item "date"))))
+                                    (date-util/format-time (.get item "date")))
                           (dom/span #js{:className "date"}
-                                    (gstring/format "%02d-%02d-%d"
-                                                    (.getDate (.get item "date"))
-                                                    (inc (.getMonth (.get item "date")))
-                                                    (.getFullYear (.get item "date"))
-                                                    ))
+                                    (date-util/format-date (.get item "date")))
                           (dom/span #js {:className "category-button"
                                           :style #js {:backgroundColor (string-to-color (.get item "category"))}
                                           } (.get  item "category"))

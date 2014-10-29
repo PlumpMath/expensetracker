@@ -3,19 +3,19 @@
   (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [cljs.core.async :refer [put! chan <!]]
-            ; gcl
-            [goog.string :as gstring]
-            [goog.string.format :as gformat]
             ;local
             [expenses.components.content :as content]
             [expenses.components.menu :as menu] 
             [expenses.components.add :as add]
-            [expenses.components.list :as list]
+            [expenses.components.list :as listc]
+            [expenses.date-util :as date-util]
             [expenses.db :as db]
             ; debug
             ;[figwheel.client :as fw :include-macros true]
             ))
 
+
+(enable-console-print!)
 
 ;; touch events 
 ;; -----------------------------------------------------------------------------
@@ -96,7 +96,7 @@
             :main  content/main-component
             :add   add/add-component
             :edit  add/edit-component
-            :list  list/days-list-component
+            :list  listc/days-list-component
             :error error-component
             loading)
           app)))))
