@@ -1,0 +1,18 @@
+goog.addDependency("base.js", ['goog'], []);
+goog.addDependency("../cljs/core.js", ['cljs.core'], ['goog.string', 'goog.object', 'goog.string.StringBuffer', 'goog.array']);
+goog.addDependency("../expenses/db.js", ['expenses.db'], ['cljs.core']);
+goog.addDependency("../cljs/core/async/impl/protocols.js", ['cljs.core.async.impl.protocols'], ['cljs.core']);
+goog.addDependency("../cljs/core/async/impl/ioc_helpers.js", ['cljs.core.async.impl.ioc_helpers'], ['cljs.core', 'cljs.core.async.impl.protocols']);
+goog.addDependency("../cljs/core/async/impl/buffers.js", ['cljs.core.async.impl.buffers'], ['cljs.core', 'cljs.core.async.impl.protocols']);
+goog.addDependency("../om/dom.js", ['om.dom'], ['cljs.core']);
+goog.addDependency("../cljs/core/async/impl/dispatch.js", ['cljs.core.async.impl.dispatch'], ['cljs.core', 'cljs.core.async.impl.buffers']);
+goog.addDependency("../cljs/core/async/impl/channels.js", ['cljs.core.async.impl.channels'], ['cljs.core.async.impl.dispatch', 'cljs.core', 'cljs.core.async.impl.buffers', 'cljs.core.async.impl.protocols']);
+goog.addDependency("../cljs/core/async/impl/timers.js", ['cljs.core.async.impl.timers'], ['cljs.core.async.impl.channels', 'cljs.core.async.impl.dispatch', 'cljs.core', 'cljs.core.async.impl.protocols']);
+goog.addDependency("../cljs/core/async.js", ['cljs.core.async'], ['cljs.core.async.impl.channels', 'cljs.core.async.impl.dispatch', 'cljs.core', 'cljs.core.async.impl.buffers', 'cljs.core.async.impl.protocols', 'cljs.core.async.impl.ioc_helpers', 'cljs.core.async.impl.timers']);
+goog.addDependency("../expenses/dateutil.js", ['expenses.dateutil'], ['goog.string', 'cljs.core', 'goog.string.format']);
+goog.addDependency("../om/core.js", ['om.core'], ['cljs.core', 'om.dom', 'goog.ui.IdGenerator']);
+goog.addDependency("../expenses/components/add.js", ['expenses.components.add'], ['cljs.core', 'om.dom', 'cljs.core.async', 'expenses.dateutil', 'om.core', 'expenses.db']);
+goog.addDependency("../expenses/components/content.js", ['expenses.components.content'], ['cljs.core', 'om.dom', 'cljs.core.async', 'expenses.dateutil', 'om.core']);
+goog.addDependency("../expenses/components/list.js", ['expenses.components.list'], ['goog.string', 'cljs.core', 'om.dom', 'cljs.core.async', 'goog.string.format', 'om.core']);
+goog.addDependency("../expenses/components/menu.js", ['expenses.components.menu'], ['cljs.core', 'om.dom', 'om.core']);
+goog.addDependency("../expenses/core.js", ['expenses.core'], ['cljs.core', 'expenses.components.add', 'om.dom', 'expenses.components.content', 'expenses.components.list', 'cljs.core.async', 'expenses.components.menu', 'om.core', 'expenses.db']);
